@@ -1,13 +1,17 @@
 {
-	"extends": "../../tsconfig.json",
-	"compilerOptions": {
-	  "baseUrl": ".",
-	  "paths": {
-		"@repo/*": ["../*/index.ts"]
-	  },
-	  "skipLibCheck": true
-	},
-	"include": ["**/*.ts"],
-	"exclude": ["dist", "build", "node_modules"]
-  }
-  
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@repo/*": ["../*/index.ts"],
+      "@orpc/server": ["lib/orpc_stubs/server.ts"],
+      "@orpc/server/fetch": ["lib/orpc_stubs/server-fetch.ts"],
+      "@orpc/json-schema": ["lib/orpc_stubs/json-schema.ts"],
+      "@orpc/openapi/fetch": ["lib/orpc_stubs/openapi-fetch.ts"],
+      "@orpc/zod/zod4": ["lib/orpc_stubs/zod4.ts"]
+    },
+    "skipLibCheck": true
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["dist", "build", "node_modules"]
+}
