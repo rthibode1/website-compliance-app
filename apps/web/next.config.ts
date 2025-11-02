@@ -1,12 +1,10 @@
 // -----------------------------------------------------------------------------
 // ✅ Simplified Next.js config for Firebase App Hosting
-// Purpose: Removes AI/OpenAPI deps and Prisma plugin issues for Supastarter.
+// Purpose: Removes AI/OpenAPI deps and Prisma plugin issues for Supastarter,
+//          and adds ORPC stub aliases for build-time resolution.
 // -----------------------------------------------------------------------------
 
-// Commented out problematic plugin
-// import { withContentCollections } from "@content-collections/next";
-
-// Temporarily disable Prisma plugin and extra packages not used in compliance app
+import path from "path";
 import type { NextConfig } from "next";
 import nextIntlPlugin from "next-intl/plugin";
 
@@ -17,16 +15,12 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
 
   // Only transpile packages you actually use
-  transpilePackages: [
-    "@repo/ui",
-    "@repo/config",
-    "@repo/tailwind-config"
-  ],
+  transpilePackages: ["@repo/ui", "@repo/config", "@repo/tailwind-config"],
 
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
-      { protocol: "https", hostname: "avatars.githubusercontent.com" }
+      { protocol: "https", hostname: "avatars.githubusercontent.com" },
     ],
   },
 
@@ -61,6 +55,16 @@ const nextConfig: NextConfig = {
         resourceRegExp: /^pg-native$|^cloudflare:sockets$/,
       }),
     );
+
+    // ✅ Add ORPC stub aliases for Firebase/Next.js build
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      "@orpc/server": path.resolve(__dirname, "../../packages/api/lib/orpc_stubs/server.ts"),
+      "@orpc/server/fetch": path.resolve(__dirname, "../../packages/api/lib/orpc_stubs/server-fetch.ts"),
+      "@orpc/json-schema": path.resolve(__dirname, "../../packages/api/lib/orpc_stubs/json-schema.ts"),
+      "@orpc/openapi/fetch": path.resolve(__dirname, "../../packages/api/lib/orpc_stubs/openapi-fetch.ts"),
+      "@orpc/zod/zod4": path.resolve(__dirname, "../../packages/api/lib/orpc_stubs/zod4.ts"),
+    };
 
     return config;
   },
