@@ -102,9 +102,9 @@ export async function resetPassword(email: string) {
 	await sendPasswordResetEmail(auth, email)
 }
 
-export function observeAuthState(callback: (user: User | null) => void) {
+export async function observeAuthState(callback: (user: User | null) => void) {
 	return onAuthStateChanged(auth, callback)
-}
+  }
 
 // ---------------------------------------------------------------------------
 // Organization & Compliance Integration (customizable stubs)
