@@ -67,6 +67,6 @@ const nextConfig: NextConfig = {
 };
 
 // Temporarily disable content collections
-const withContentCollections = (config) => config;
+const withContentCollections = (config: NextConfig) => config;
 
 export default withContentCollections(withNextIntl(nextConfig));

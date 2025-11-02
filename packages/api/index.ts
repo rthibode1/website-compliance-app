@@ -5,7 +5,7 @@ import { config } from "@repo/config";
 import { logger } from "@repo/logs";
 import { webhookHandler as paymentsWebhookHandler } from "@repo/payments";
 import { getBaseUrl } from "@repo/utils";
-import { Scalar } from "@scalar/hono-api-reference";
+import { Scalar } from "./lib/scalar_stub";  // ✅ FIXED
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger as honoLogger } from "hono/logger";
