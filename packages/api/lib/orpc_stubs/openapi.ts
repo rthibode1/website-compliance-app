@@ -1,5 +1,7 @@
-// openapi.ts
+// ./lib/orpc_stubs/openapi.ts
 export class OpenAPIGenerator {
-    async generate() { return {}; }
-  }
-  
+	constructor(_opts?: any) {}
+	async generate(_router?: any, _options?: any) {
+		return {};
+	}
+}
