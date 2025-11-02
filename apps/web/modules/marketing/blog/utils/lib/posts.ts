@@ -1,25 +1,23 @@
+// -----------------------------------------------------------------------------
+// ✅ Stubbed blog post loader for Firebase / production builds
+// Purpose: Disables content-collections dependency that causes build errors
+// -----------------------------------------------------------------------------
+
 import type { Post } from "@marketing/blog/types";
-import { allPosts } from "content-collections";
 
+/**
+ * Returns an empty array of posts (no content-collections dependency)
+ */
 export async function getAllPosts(): Promise<Post[]> {
-	// ... add a custom loader here for your posts and map it to the post schema
-
-	return Promise.resolve(allPosts);
+  return [];
 }
 
+/**
+ * Returns null for any slug lookup
+ */
 export async function getPostBySlug(
-	slug: string,
-	options?: {
-		locale?: string;
-	},
+  slug: string,
+  options?: { locale?: string }
 ): Promise<Post | null> {
-	// ... add a custom loader here for your posts and map it to the post schema
-
-	return Promise.resolve(
-		allPosts.find(
-			(post) =>
-				post.path === slug &&
-				(!options?.locale || post.locale === options.locale),
-		) ?? null,
-	);
+  return null;
 }
