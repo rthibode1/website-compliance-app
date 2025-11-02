@@ -1,5 +1,5 @@
-import { OpenAPIGenerator } from "@orpc/openapi";
-import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
+import { OpenAPIGenerator } from "./lib/orpc_stubs/openapi";
+import { ZodToJsonSchemaConverter } from "./lib/orpc_stubs/zod4";
 import { auth } from "@repo/auth";
 import { config } from "@repo/config";
 import { logger } from "@repo/logs";
