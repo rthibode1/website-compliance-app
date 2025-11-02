@@ -1,24 +1,61 @@
 {
-	"extends": "@repo/tsconfig/nextjs.json",
-	"compilerOptions": {
-		"plugins": [{ "name": "next" }],
-		"paths": {
-			"@analytics": ["./modules/analytics"],
-			"@marketing/*": ["./modules/marketing/*"],
-			"@saas/*": ["./modules/saas/*"],
-			"@ui/*": ["./modules/ui/*"],
-			"@i18n": ["./modules/i18n"],
-			"@i18n/*": ["./modules/i18n/*"],
-			"@shared/*": ["./modules/shared/*"],
-			"content-collections": ["./.content-collections/generated"]
-		}
-	},
-	"include": [
-		"**/*.ts",
-		"**/*.tsx",
-		"**/*.cjs",
-		"**/*.mjs",
-		".next/types/**/*.ts"
-	],
-	"exclude": ["node_modules"]
+  "extends": "@repo/tsconfig/base.json",
+  "compilerOptions": {
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@repo/*": [
+        "../../packages/*"
+      ],
+      "@analytics": [
+        "./modules/analytics"
+      ],
+      "@marketing/*": [
+        "./modules/marketing/*"
+      ],
+      "@saas/*": [
+        "./modules/saas/*"
+      ],
+      "@ui/*": [
+        "./modules/ui/*"
+      ],
+      "@i18n": [
+        "./modules/i18n"
+      ],
+      "@i18n/*": [
+        "./modules/i18n/*"
+      ],
+      "@shared/*": [
+        "./modules/shared/*"
+      ],
+      "content-collections": [
+        "./.content-collections/generated"
+      ]
+    },
+    "target": "ES2017",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "noEmit": true,
+    "incremental": true,
+    "module": "esnext",
+    "resolveJsonModule": true,
+    "jsx": "preserve"
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.cjs",
+    "**/*.mjs",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

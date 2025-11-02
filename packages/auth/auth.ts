@@ -1,275 +1,155 @@
-import { config } from "@repo/config";
+'use server'
+/**
+ * ---------------------------------------------------------------------------
+ * Firebase-Compatible Auth Configuration for Supastarter
+ * ---------------------------------------------------------------------------
+ * This version replaces BetterAuth + Prisma with Firebase Auth + Firestore.
+ * Works in Firebase Studio, Firebase Hosting, and Cloud Functions environments.
+ *
+ * Required env vars:
+ *  - NEXT_PUBLIC_FIREBASE_API_KEY
+ *  - NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+ *  - NEXT_PUBLIC_FIREBASE_PROJECT_ID
+ *  - NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+ *  - NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+ *  - NEXT_PUBLIC_FIREBASE_APP_ID
+ *  - NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+ *
+ * Maintainer: Ryan Thibodeaux
+ * Context: Website Compliance Dashboard (Client Portal)
+ * ---------------------------------------------------------------------------
+ */
+
+import { initializeApp, getApps, getApp } from 'firebase/app'
 import {
-	db,
-	getInvitationById,
-	getPurchasesByOrganizationId,
-	getPurchasesByUserId,
-	getUserByEmail,
-} from "@repo/database";
-import type { Locale } from "@repo/i18n";
-import { logger } from "@repo/logs";
-import { sendEmail } from "@repo/mail";
-import { cancelSubscription } from "@repo/payments";
-import { getBaseUrl } from "@repo/utils";
-import { betterAuth } from "better-auth";
-import { prismaAdapter } from "better-auth/adapters/prisma";
+	getAuth,
+	signInWithEmailAndPassword,
+	createUserWithEmailAndPassword,
+	sendPasswordResetEmail,
+	sendEmailVerification,
+	signOut,
+	onAuthStateChanged,
+	User
+} from 'firebase/auth'
 import {
-	admin,
-	createAuthMiddleware,
-	magicLink,
-	openAPI,
-	organization,
-	twoFactor,
-	username,
-} from "better-auth/plugins";
-import { passkey } from "better-auth/plugins/passkey";
-import { parse as parseCookies } from "cookie";
-import { updateSeatsInOrganizationSubscription } from "./lib/organization";
-import { invitationOnlyPlugin } from "./plugins/invitation-only";
+	getFirestore,
+	doc,
+	getDoc,
+	setDoc,
+	updateDoc,
+	collection,
+	query,
+	where,
+	getDocs
+} from 'firebase/firestore'
+import { parse as parseCookies } from 'cookie'
+
+// Safe access helper for i18n defaults (if @repo/config not loaded)
+const i18n = {
+	localeCookieName: 'NEXT_LOCALE',
+	defaultLocale: 'en',
+}
 
 const getLocaleFromRequest = (request?: Request) => {
-	const cookies = parseCookies(request?.headers.get("cookie") ?? "");
-	return (
-		(cookies[config.i18n.localeCookieName] as Locale) ??
-		config.i18n.defaultLocale
-	);
-};
+	const cookies = parseCookies(request?.headers.get('cookie') ?? '')
+	return (cookies[i18n.localeCookieName] as string) ?? i18n.defaultLocale
+}
 
-const appUrl = getBaseUrl();
+// ---------------------------------------------------------------------------
+// Firebase Initialization
+// ---------------------------------------------------------------------------
 
-export const auth = betterAuth({
-	baseURL: appUrl,
-	trustedOrigins: [appUrl],
-	appName: config.appName,
-	database: prismaAdapter(db, {
-		provider: "postgresql",
-	}),
-	advanced: {
-		database: {
-			generateId: false,
-		},
-	},
-	session: {
-		expiresIn: config.auth.sessionCookieMaxAge,
-		freshAge: 0,
-	},
-	account: {
-		accountLinking: {
-			enabled: true,
-			trustedProviders: ["google", "github"],
-		},
-	},
-	hooks: {
-		after: createAuthMiddleware(async (ctx) => {
-			if (ctx.path.startsWith("/organization/accept-invitation")) {
-				const { invitationId } = ctx.body;
+const firebaseConfig = {
+	apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+	authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+	projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+	storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+	messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+	appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+	measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+}
 
-				if (!invitationId) {
-					return;
-				}
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig)
+export const auth = getAuth(app)
+export const db = getFirestore(app)
 
-				const invitation = await getInvitationById(invitationId);
+// ---------------------------------------------------------------------------
+// User Management Helpers
+// ---------------------------------------------------------------------------
 
-				if (!invitation) {
-					return;
-				}
+export async function registerUser(email: string, password: string) {
+	const userCred = await createUserWithEmailAndPassword(auth, email, password)
+	await sendEmailVerification(userCred.user)
+	// Optionally create Firestore profile document
+	await setDoc(doc(db, 'users', userCred.user.uid), {
+		email,
+		createdAt: new Date(),
+		onboardingComplete: false,
+	})
+	return userCred.user
+}
 
-				await updateSeatsInOrganizationSubscription(
-					invitation.organizationId,
-				);
-			} else if (ctx.path.startsWith("/organization/remove-member")) {
-				const { organizationId } = ctx.body;
+export async function loginUser(email: string, password: string) {
+	const userCred = await signInWithEmailAndPassword(auth, email, password)
+	return userCred.user
+}
 
-				if (!organizationId) {
-					return;
-				}
+export async function logoutUser() {
+	await signOut(auth)
+}
 
-				await updateSeatsInOrganizationSubscription(organizationId);
-			}
-		}),
-		before: createAuthMiddleware(async (ctx) => {
-			if (
-				ctx.path.startsWith("/delete-user") ||
-				ctx.path.startsWith("/organization/delete")
-			) {
-				const userId = ctx.context.session?.session.userId;
-				const { organizationId } = ctx.body;
+export async function resetPassword(email: string) {
+	await sendPasswordResetEmail(auth, email)
+}
 
-				if (userId || organizationId) {
-					const purchases = organizationId
-						? await getPurchasesByOrganizationId(organizationId)
-						: // biome-ignore lint/style/noNonNullAssertion: This is a valid case
-							await getPurchasesByUserId(userId!);
-					const subscriptions = purchases.filter(
-						(purchase) =>
-							purchase.type === "SUBSCRIPTION" &&
-							purchase.subscriptionId !== null,
-					);
+export function observeAuthState(callback: (user: User | null) => void) {
+	return onAuthStateChanged(auth, callback)
+}
 
-					if (subscriptions.length > 0) {
-						for (const subscription of subscriptions) {
-							await cancelSubscription(
-								// biome-ignore lint/style/noNonNullAssertion: This is a valid case
-								subscription.subscriptionId!,
-							);
-						}
-					}
-				}
-			}
-		}),
-	},
-	user: {
-		additionalFields: {
-			onboardingComplete: {
-				type: "boolean",
-				required: false,
-			},
-			locale: {
-				type: "string",
-				required: false,
-			},
-		},
-		deleteUser: {
-			enabled: true,
-		},
-		changeEmail: {
-			enabled: true,
-			sendChangeEmailVerification: async (
-				{ user: { email, name }, url },
-				request,
-			) => {
-				const locale = getLocaleFromRequest(request);
-				await sendEmail({
-					to: email,
-					templateId: "emailVerification",
-					context: {
-						url,
-						name,
-					},
-					locale,
-				});
-			},
-		},
-	},
-	emailAndPassword: {
-		enabled: true,
-		// If signup is disabled, the only way to sign up is via an invitation. So in this case we can auto sign in the user, as the email is already verified by the invitation.
-		// If signup is enabled, we can't auto sign in the user, as the email is not verified yet.
-		autoSignIn: !config.auth.enableSignup,
-		requireEmailVerification: config.auth.enableSignup,
-		sendResetPassword: async ({ user, url }, request) => {
-			const locale = getLocaleFromRequest(request);
-			await sendEmail({
-				to: user.email,
-				templateId: "forgotPassword",
-				context: {
-					url,
-					name: user.name,
-				},
-				locale,
-			});
-		},
-	},
-	emailVerification: {
-		sendOnSignUp: config.auth.enableSignup,
-		autoSignInAfterVerification: true,
-		sendVerificationEmail: async (
-			{ user: { email, name }, url },
-			request,
-		) => {
-			const locale = getLocaleFromRequest(request);
-			await sendEmail({
-				to: email,
-				templateId: "emailVerification",
-				context: {
-					url,
-					name,
-				},
-				locale,
-			});
-		},
-	},
-	socialProviders: {
-		google: {
-			clientId: process.env.GOOGLE_CLIENT_ID as string,
-			clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-			scope: ["email", "profile"],
-		},
-		github: {
-			clientId: process.env.GITHUB_CLIENT_ID as string,
-			clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
-			scope: ["user:email"],
-		},
-	},
-	plugins: [
-		username(),
-		admin(),
-		passkey(),
-		magicLink({
-			disableSignUp: false,
-			sendMagicLink: async ({ email, url }, request) => {
-				const locale = getLocaleFromRequest(request);
-				await sendEmail({
-					to: email,
-					templateId: "magicLink",
-					context: {
-						url,
-					},
-					locale,
-				});
-			},
-		}),
-		organization({
-			sendInvitationEmail: async (
-				{ email, id, organization },
-				request,
-			) => {
-				const locale = getLocaleFromRequest(request);
-				const existingUser = await getUserByEmail(email);
+// ---------------------------------------------------------------------------
+// Organization & Compliance Integration (customizable stubs)
+// ---------------------------------------------------------------------------
 
-				const url = new URL(
-					existingUser ? "/auth/login" : "/auth/signup",
-					getBaseUrl(),
-				);
+export async function getOrganizationForUser(userId: string) {
+	const orgsRef = collection(db, 'organizations')
+	const q = query(orgsRef, where('members', 'array-contains', userId))
+	const snapshot = await getDocs(q)
+	return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+}
 
-				url.searchParams.set("invitationId", id);
-				url.searchParams.set("email", email);
+export async function updateUserLocale(userId: string, locale: string) {
+	await updateDoc(doc(db, 'users', userId), { locale })
+}
 
-				await sendEmail({
-					to: email,
-					templateId: "organizationInvitation",
-					locale,
-					context: {
-						organizationName: organization.name,
-						url: url.toString(),
-					},
-				});
-			},
-		}),
-		openAPI(),
-		invitationOnlyPlugin(),
-		twoFactor(),
-	],
-	onAPIError: {
-		onError(error, ctx) {
-			logger.error(error, { ctx });
-		},
-	},
-});
+// ---------------------------------------------------------------------------
+// Email Send Placeholder (replace with Cloud Function / SendGrid)
+// ---------------------------------------------------------------------------
 
-export * from "./lib/organization";
+export async function sendEmailPlaceholder(to: string, subject: string, body: string) {
+	console.log(`Simulated email → To: ${to}\nSubject: ${subject}\n\n${body}`)
+	// Replace with Cloud Function or external API call later
+}
 
-export type Session = typeof auth.$Infer.Session;
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
-export type ActiveOrganization = NonNullable<
-	Awaited<ReturnType<typeof auth.api.getFullOrganization>>
->;
+export type AppUser = {
+	uid: string
+	email: string
+	onboardingComplete?: boolean
+	locale?: string
+}
 
-export type Organization = typeof auth.$Infer.Organization;
+export type Organization = {
+	id: string
+	name: string
+	members: string[]
+}
 
-export type OrganizationMemberRole =
-	ActiveOrganization["members"][number]["role"];
-
-export type OrganizationInvitationStatus = typeof auth.$Infer.Invitation.status;
-
-export type OrganizationMetadata = Record<string, unknown> | undefined;
+// ---------------------------------------------------------------------------
+// Example Usage
+// ---------------------------------------------------------------------------
+// await registerUser('user@example.com', 'password123')
+// const user = await loginUser('user@example.com', 'password123')
+// await logoutUser()

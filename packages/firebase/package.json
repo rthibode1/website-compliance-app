@@ -1,19 +1,19 @@
 {
-  "name": "@repo/api",
+  "name": "@repo/firebase",
   "version": "0.0.0",
   "private": true,
-  "main": "index.ts",
+  "main": "./index.ts",
+  "types": "./index.ts",
   "scripts": {
     "lint": "biome lint .",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "openai": "5.23.0",
-    "zod": "^3.23.8"
+    "firebase": "^10.12.2",
+    "react-firebase-hooks": "^5.1.1"
   },
   "devDependencies": {
     "@repo/tsconfig": "workspace:*",
-    "@types/node": "24.6.0",
-    "typescript": "5.4.5"
+    "typescript": "^5.4.5"
   }
 }

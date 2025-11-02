@@ -1,12 +1,13 @@
-import { useContext } from "react";
-import { SessionContext } from "../lib/session-context";
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from '@repo/firebase';
 
 export const useSession = () => {
-	const sessionContext = useContext(SessionContext);
+  const [user, loading, error] = useAuthState(auth);
 
-	if (sessionContext === undefined) {
-		throw new Error("useSession must be used within SessionProvider");
-	}
-
-	return sessionContext;
+  return {
+    user,
+    loading,
+    error,
+    session: user ? { user } : null,
+  };
 };
