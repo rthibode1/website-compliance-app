@@ -61,6 +61,7 @@ const nextConfig: NextConfig = {
       ...(config.resolve.alias || {}),
       "@orpc/server": path.resolve(__dirname, "../../packages/api/lib/orpc_stubs/server.ts"),
       "@orpc/server/fetch": path.resolve(__dirname, "../../packages/api/lib/orpc_stubs/server-fetch.ts"),
+      "@orpc/server/helpers": path.resolve(__dirname, "../../packages/api/lib/orpc_stubs/server-helpers.ts"),
       "@orpc/json-schema": path.resolve(__dirname, "../../packages/api/lib/orpc_stubs/json-schema.ts"),
       "@orpc/openapi/fetch": path.resolve(__dirname, "../../packages/api/lib/orpc_stubs/openapi-fetch.ts"),
       "@orpc/zod/zod4": path.resolve(__dirname, "../../packages/api/lib/orpc_stubs/zod4.ts"),
