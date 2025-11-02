@@ -1,4 +1,2 @@
-// ./lib/orpc_stubs/zod4.ts
-export class ZodToJsonSchemaConverter {
-	constructor(_opts?: any) {}
-}
+export const ZodToJsonSchemaConverter = class {};
+export default {};
