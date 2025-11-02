@@ -1,62 +1,72 @@
-import { withContentCollections } from "@content-collections/next";
-// @ts-expect-error - PrismaPlugin is not typed
-import { PrismaPlugin } from "@prisma/nextjs-monorepo-workaround-plugin";
+// -----------------------------------------------------------------------------
+// ✅ Simplified Next.js config for Firebase App Hosting
+// Purpose: Removes AI/OpenAPI deps and Prisma plugin issues for Supastarter.
+// -----------------------------------------------------------------------------
+
+// Commented out problematic plugin
+// import { withContentCollections } from "@content-collections/next";
+
+// Temporarily disable Prisma plugin and extra packages not used in compliance app
 import type { NextConfig } from "next";
 import nextIntlPlugin from "next-intl/plugin";
 
 const withNextIntl = nextIntlPlugin("./modules/i18n/request.ts");
 
+// --- Main config ---
 const nextConfig: NextConfig = {
-	transpilePackages: ["@repo/api", "@repo/auth", "@repo/database"],
-	images: {
-		remotePatterns: [
-			{
-				// google profile images
-				protocol: "https",
-				hostname: "lh3.googleusercontent.com",
-			},
-			{
-				// github profile images
-				protocol: "https",
-				hostname: "avatars.githubusercontent.com",
-			},
-		],
-	},
-	async redirects() {
-		return [
-			{
-				source: "/app/settings",
-				destination: "/app/settings/general",
-				permanent: true,
-			},
-			{
-				source: "/app/:organizationSlug/settings",
-				destination: "/app/:organizationSlug/settings/general",
-				permanent: true,
-			},
-			{
-				source: "/app/admin",
-				destination: "/app/admin/users",
-				permanent: true,
-			},
-		];
-	},
-	eslint: {
-		ignoreDuringBuilds: true,
-	},
-	webpack: (config, { webpack, isServer }) => {
-		config.plugins.push(
-			new webpack.IgnorePlugin({
-				resourceRegExp: /^pg-native$|^cloudflare:sockets$/,
-			}),
-		);
+  reactStrictMode: true,
 
-		if (isServer) {
-			config.plugins.push(new PrismaPlugin());
-		}
+  // Only transpile packages you actually use
+  transpilePackages: [
+    "@repo/ui",
+    "@repo/config",
+    "@repo/tailwind-config"
+  ],
 
-		return config;
-	},
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "lh3.googleusercontent.com" },
+      { protocol: "https", hostname: "avatars.githubusercontent.com" }
+    ],
+  },
+
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+
+  async redirects() {
+    return [
+      {
+        source: "/app/settings",
+        destination: "/app/settings/general",
+        permanent: true,
+      },
+      {
+        source: "/app/:organizationSlug/settings",
+        destination: "/app/:organizationSlug/settings/general",
+        permanent: true,
+      },
+      {
+        source: "/app/admin",
+        destination: "/app/admin/users",
+        permanent: true,
+      },
+    ];
+  },
+
+  webpack: (config, { webpack }) => {
+    // Ignore optional deps that crash serverless builds
+    config.plugins.push(
+      new webpack.IgnorePlugin({
+        resourceRegExp: /^pg-native$|^cloudflare:sockets$/,
+      }),
+    );
+
+    return config;
+  },
 };
+
+// Temporarily disable content collections
+const withContentCollections = (config) => config;
 
 export default withContentCollections(withNextIntl(nextConfig));
