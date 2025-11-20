@@ -23,9 +23,9 @@
   "devDependencies": {
     "@repo/tailwind-config": "workspace:*",
     "@repo/tsconfig": "workspace:*",
-    "@types/node": "^24.6.0",
+    "@types/node": "^24.10.1",
     "@types/react": "^19.1.16",
     "@types/react-dom": "^19.1.5",
-    "typescript": "^5.4.5"
+    "typescript": "^5.9.3"
   }
 }
